@@ -17,7 +17,10 @@ export default function Dashboard() {
 
   // Fetch AI risk data from FastAPI backend when dashboard loads
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/risk-data")
+    // Use environment variable for production, fallback to localhost for local dev
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    
+    fetch(`${apiUrl}/api/risk-data`)
       .then((res) => res.json())
       .then((data) => {
         setRiskData(data);
