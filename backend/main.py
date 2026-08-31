@@ -122,12 +122,16 @@ def get_risk_data():
                 }
                 features.append(feature_geojson)
         except Exception as e:
+            error_details = str(e)
             print(f"Error generating predictions/SHAP: {e}")
             
     # Fallback to ensure the map NEVER goes blank if ML fails
     if not features:
         for spot in hotspots:
             risk_score = 85 if "Tawang" in spot["name"] else 40
+            
+            err_msg = error_details if 'error_details' in locals() else "Model failed to load (Check Start Command)"
+            
             feature_geojson = {
                 "type": "Feature",
                 "geometry": {
@@ -137,7 +141,7 @@ def get_risk_data():
                 "properties": {
                     "location": spot["name"],
                     "riskScore": risk_score,
-                    "explanations": [{"factor": "Status", "value": "Fallback UI Mode (ML Error)", "impact": "None"}]
+                    "explanations": [{"factor": "Error Details", "value": err_msg, "impact": "None"}]
                 }
             }
             features.append(feature_geojson)
