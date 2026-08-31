@@ -6,6 +6,7 @@ import shap
 import pandas as pd
 import numpy as np
 import os
+import requests
 
 app = FastAPI(title="SIH26001 Landslide Risk API")
 
@@ -46,15 +47,22 @@ def get_risk_data():
     
     live_records = []
     for spot in hotspots:
-        if "Tawang" in spot["name"]:
-            rain = random.uniform(200, 280)
-            moist = random.uniform(70, 90)
-        elif "Gangtok" in spot["name"]:
-            rain = random.uniform(100, 150)
-            moist = random.uniform(50, 70)
-        else:
-            rain = random.uniform(0, 50)
-            moist = random.uniform(10, 40)
+        # Fetch REAL LIVE weather data from Open-Meteo API (Free, No Auth required)
+        try:
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={spot['lat']}&longitude={spot['lng']}&current=precipitation,relative_humidity_2m"
+            resp = requests.get(url, timeout=3).json()
+            
+            # Precipitation is returned per hour. We scale it up to estimate a 24h impact for the model.
+            current_rain_mm = resp['current']['precipitation']
+            rain = current_rain_mm * 24  
+            
+            # Use real-time Relative Humidity as a direct proxy for top-layer soil moisture
+            moist = resp['current']['relative_humidity_2m']
+        except Exception as e:
+            print(f"Weather API Error for {spot['name']}: {e}")
+            # Fallback to safe/stable weather if API fails
+            rain = 0.0
+            moist = 40.0
 
         live_records.append({
             'rainfall_24h': rain,
