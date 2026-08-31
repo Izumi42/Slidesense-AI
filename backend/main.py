@@ -80,8 +80,11 @@ def get_risk_data():
             probabilities = model.predict_proba(df_live)[:, 1] * 100
             shap_vals = explainer.shap_values(df_live)
             
+            # Handle SHAP dimension changes across different library versions
             if isinstance(shap_vals, list):
                 shap_vals = shap_vals[1]
+            elif len(np.shape(shap_vals)) == 3:
+                shap_vals = shap_vals[:, :, 1]
 
             for i, spot in enumerate(hotspots):
                 risk_score = round(probabilities[i], 1)
@@ -89,7 +92,7 @@ def get_risk_data():
                 
                 explanations = []
                 for j, feature in enumerate(feature_names):
-                    impact_val = local_shap[j]
+                    impact_val = float(local_shap[j])
                     if impact_val > 0.02:
                         actual_val = df_live.iloc[i][feature]
                         val_str = f"{actual_val:.1f}"
