@@ -20,7 +20,7 @@ except:
 WEATHER_CACHE = {}
 
 @app.get("/api/risk-data")
-def get_risk_data():
+def get_risk_data(demo: bool = False):
     hotspots = [
         {"name": "Gangtok (Sikkim)", "lat": 27.3389, "lng": 88.6065, "slope": 35.0, "veg": 0.6},
         {"name": "Guwahati (Assam)", "lat": 26.1445, "lng": 91.7362, "slope": 15.0, "veg": 0.4},
@@ -44,8 +44,8 @@ def get_risk_data():
                 rain, moist = 0.0, 40.0
 
         # --- HACKATHON DEMO OVERRIDE ---
-        # Artificially spike Tawang's weather to trigger a Critical Alert for the judges
-        if "Tawang" in name:
+        # Artificially spike Tawang's weather if UI toggle is flipped
+        if demo and "Tawang" in name:
             rain, moist = 260.0, 88.0
         # -------------------------------
 

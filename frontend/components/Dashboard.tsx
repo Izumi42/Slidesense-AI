@@ -14,13 +14,15 @@ L.Icon.Default.mergeOptions({
 export default function Dashboard() {
   const [riskData, setRiskData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
-  // Fetch AI risk data from FastAPI backend when dashboard loads
+  // Fetch AI risk data from FastAPI backend when dashboard loads or toggle changes
   useEffect(() => {
+    setLoading(true);
     // Use environment variable for production, fallback to localhost for local dev
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     
-    fetch(`${apiUrl}/api/risk-data`)
+    fetch(`${apiUrl}/api/risk-data?demo=${isDemoMode}`)
       .then((res) => res.json())
       .then((data) => {
         setRiskData(data);
@@ -30,18 +32,33 @@ export default function Dashboard() {
         console.error("Failed to fetch risk data:", err);
         setLoading(false);
       });
-  }, []);
+  }, [isDemoMode]);
 
   const features = riskData?.features || [];
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="p-4 bg-gray-800 font-bold text-xl border-b border-gray-700 flex justify-between items-center">
-        <span>SIH26001: AI Landslide Risk Monitoring (NER)</span>
-        <span className="text-sm font-normal text-green-400 flex items-center">
-          <span className="animate-pulse h-2 w-2 bg-green-500 rounded-full mr-2"></span>
-          Live Data Synced
-        </span>
+      <header className="p-4 bg-gray-800 font-bold text-xl border-b border-gray-700 flex justify-between items-center shadow-lg z-10">
+        <span className="text-white tracking-wide">SIH26001: <span className="text-blue-400">SlideSense AI</span></span>
+        
+        <div className="flex items-center space-x-8">
+          {/* Hackathon Demo Toggle */}
+          <label className="flex items-center cursor-pointer bg-gray-700 py-1 px-3 rounded-full hover:bg-gray-600 transition">
+            <span className="mr-3 text-sm font-bold text-white uppercase tracking-wider">
+              Simulate Storm
+            </span>
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={isDemoMode} onChange={() => setIsDemoMode(!isDemoMode)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${isDemoMode ? 'bg-red-500' : 'bg-gray-900'}`}></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform ${isDemoMode ? 'translate-x-4' : ''}`}></div>
+            </div>
+          </label>
+
+          <span className="text-sm font-normal text-green-400 flex items-center bg-gray-900 py-1 px-3 rounded-full">
+            <span className="animate-pulse h-2 w-2 bg-green-500 rounded-full mr-2 shadow-[0_0_8px_#22c55e]"></span>
+            Live Data Synced
+          </span>
+        </div>
       </header>
       
       <div className="flex flex-1">
