@@ -103,10 +103,11 @@ export default function Dashboard() {
             zoom={6.5} 
             className="h-full w-full absolute inset-0"
           >
-            {/* Professional Dark Mode Map Layer */}
+            {/* OpenStreetMap Base (We will use CSS to make it Dark Mode for free!) */}
             <TileLayer
-              attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              className="map-tiles"
             />
             
             {/* Dynamically render SlideSense AI Risk Markers */}
