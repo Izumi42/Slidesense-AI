@@ -52,10 +52,12 @@ export default function Dashboard() {
 
   const allFeatures = [...(riskData?.features || []), ...customFeatures];
 
-  // Colors based on theme
+  // Map base URLs (Esri ArcGIS - 100% Free, No API Key Required)
   const mapUrl = isDarkMode 
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    ? "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+    : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+    
+  const attribution = "&copy; Esri, DeLorme, NAVTEQ";
 
   return (
     <div className={`flex h-screen flex-col font-sans transition-colors duration-300 ${isDarkMode ? 'bg-gray-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -128,7 +130,7 @@ export default function Dashboard() {
 
           <MapContainer center={[26.1445, 91.7362]} zoom={6} className="h-full w-full absolute inset-0 z-0">
             <MapClickHandler onMapClick={handleMapClick} isActive={isClickPredictActive} />
-            <TileLayer key={isDarkMode ? 'dark' : 'light'} url={mapUrl} />
+            <TileLayer key={isDarkMode ? 'dark' : 'light'} url={mapUrl} attribution={attribution} />
             
             {!loading && allFeatures.map((feature: any, index: number) => {
               const [lng, lat] = feature.geometry.coordinates;
