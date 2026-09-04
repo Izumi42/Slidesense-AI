@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in Leaflet with Next.js
@@ -97,81 +97,60 @@ export default function Dashboard() {
       
       <div className="flex flex-1">
         {/* Main Map View */}
-        <main className="flex-1 relative z-0 bg-gray-900">
+        <main className="flex-1 relative z-0 bg-gray-200">
           <MapContainer 
-            center={[26.5, 91.5]} // Centered perfectly over NER
-            zoom={6.5} 
+            center={[26.1445, 91.7362]} // Centered near Guwahati, Assam
+            zoom={6} 
             className="h-full w-full absolute inset-0"
           >
-            {/* OpenStreetMap Base (We will use CSS to make it Dark Mode for free!) */}
+            {/* Switched to standard OpenStreetMap to remove Carto API key watermarks */}
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              className="map-tiles"
             />
             
-            {/* Dynamically render SlideSense AI Risk Markers */}
+            {/* Dynamically render markers from the AI Backend */}
             {!loading && features.map((feature: any, index: number) => {
               const [lng, lat] = feature.geometry.coordinates;
               const { location, riskScore, explanations } = feature.properties;
               
-              const isCritical = riskScore >= 80;
-              const isWarning = riskScore >= 60;
-              const themeColor = isCritical ? '#ef4444' : isWarning ? '#eab308' : '#22c55e';
+              const strokeColor = riskScore >= 80 ? '#ef4444' : riskScore >= 60 ? '#eab308' : '#22c55e';
+              const fillColor = riskScore >= 80 ? '#fca5a5' : riskScore >= 60 ? '#fde047' : '#86efac';
 
               return (
                 <React.Fragment key={index}>
-                  {/* Outer Radar Perimeter (25km zone) */}
                   <Circle 
                     center={[lat, lng]} 
-                    radius={25000} 
-                    pathOptions={{ 
-                      color: themeColor, 
-                      fillColor: themeColor, 
-                      fillOpacity: isCritical ? 0.2 : 0.05, 
-                      weight: 1.5,
-                      dashArray: "6, 6" 
-                    }} 
+                    radius={25000} // 25km radius heat-zone
+                    pathOptions={{ color: strokeColor, fillColor: fillColor, fillOpacity: 0.4, weight: 2 }} 
                   />
-                  
-                  {/* Glowing Epicenter Dot */}
-                  <CircleMarker 
-                    center={[lat, lng]} 
-                    radius={isCritical ? 10 : 7}
-                    pathOptions={{ 
-                      color: isCritical ? '#7f1d1d' : themeColor, 
-                      fillColor: themeColor, 
-                      fillOpacity: 1, 
-                      weight: 2 
-                    }}
-                  >
+                  <Marker position={[lat, lng]}>
                     <Popup>
-                      <div className="p-1 min-w-[210px]">
-                        <h3 className="font-black text-lg text-gray-800 border-b pb-1 mb-2">{location}</h3>
-                        <div className={`text-sm font-bold mb-3 py-1 px-2 rounded bg-gray-100 border-l-4 ${isCritical ? 'border-red-500 text-red-600' : isWarning ? 'border-yellow-500 text-yellow-600' : 'border-green-500 text-green-600'}`}>
+                      <div className="p-1 min-w-[200px]">
+                        <h3 className="font-bold text-lg mb-1">{location}</h3>
+                        <div className={`text-sm font-bold mb-2 ${riskScore >= 80 ? 'text-red-600' : riskScore >= 60 ? 'text-yellow-600' : 'text-green-600'}`}>
                           Risk Score: {riskScore}%
                         </div>
                         <div className="text-xs">
-                          <strong className="text-gray-900 uppercase tracking-wide text-[10px]">AI Factor Analysis:</strong>
-                          <ul className="mt-2 space-y-1">
+                          <strong className="text-gray-700">AI Explanation (SHAP):</strong>
+                          <ul className="mt-1 list-disc pl-4 text-gray-600">
                             {explanations.map((exp: any, i: number) => (
-                              <li key={i} className="flex justify-between items-center border-b border-gray-100 pb-1">
-                                <span className="font-semibold text-gray-700">{exp.factor}</span>
-                                <span className="text-gray-900 font-mono bg-gray-100 px-1 rounded">{exp.value}</span>
+                              <li key={i}>
+                                <span className="font-semibold">{exp.factor}</span>: {exp.value}
                               </li>
                             ))}
                           </ul>
                         </div>
                       </div>
                     </Popup>
-                  </CircleMarker>
+                  </Marker>
                 </React.Fragment>
               );
             })}
           </MapContainer>
         </main>
         
-        {/* Sidebar Alerts */}
+        {/* Sidebar Alerts (Dynamic Alerting System) */}
         <aside className="w-96 bg-gray-900 p-4 border-l border-gray-700 overflow-y-auto z-10">
           <h2 className="text-lg font-semibold mb-4 text-white">Real-Time Alerts</h2>
           

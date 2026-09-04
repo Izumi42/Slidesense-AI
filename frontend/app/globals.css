@@ -4,9 +4,3 @@
 
 /* Leaflet essential styles */
 @import 'leaflet/dist/leaflet.css';
-
-/* Brilliant Hack: Free Dark Mode Map without API Keys! */
-/* We invert the colors of the standard OpenStreetMap tiles, then rotate the hue so water stays blue/dark */
-.map-tiles {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-}
