@@ -12,10 +12,12 @@ L.Icon.Default.mergeOptions({
 });
 
 // Component to capture map clicks
-function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+function MapClickHandler({ onMapClick, isActive }: { onMapClick: (lat: number, lng: number) => void, isActive: boolean }) {
   useMapEvents({
     click(e) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
+      if (isActive) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
     },
   });
   return null;
@@ -26,6 +28,7 @@ export default function Dashboard() {
   const [customFeatures, setCustomFeatures] = useState<any[]>([]); // Stores dynamic clicked points
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isClickPredictActive, setIsClickPredictActive] = useState(false);
   const [selectedDate, setSelectedDate] = useState(""); // "" means Live Data
   const [showInfoModal, setShowInfoModal] = useState(false);
 
@@ -123,16 +126,40 @@ export default function Dashboard() {
       
       <div className="flex flex-1">
         {/* Main Map View */}
-        <main className="flex-1 relative z-0 bg-gray-200 cursor-crosshair">
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-gray-900/80 backdrop-blur text-white px-4 py-2 rounded-full shadow-lg border border-gray-600 pointer-events-none animate-bounce">
-            🎯 Click anywhere on the map to analyze custom risk!
+        <main className={`flex-1 relative z-0 bg-gray-200 ${isClickPredictActive ? 'cursor-crosshair' : ''}`}>
+          
+          {/* Floating Map Controls */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] flex items-center space-x-4 bg-gray-900/90 backdrop-blur text-white px-5 py-2 rounded-full shadow-xl border border-gray-600 transition-all">
+            <label className="flex items-center cursor-pointer hover:text-blue-400 transition">
+              <div className="relative mr-3">
+                <input type="checkbox" className="sr-only" checked={isClickPredictActive} onChange={() => setIsClickPredictActive(!isClickPredictActive)} />
+                <div className={`block w-10 h-6 rounded-full transition-colors ${isClickPredictActive ? 'bg-blue-500' : 'bg-gray-700'}`}></div>
+                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform ${isClickPredictActive ? 'translate-x-4' : ''}`}></div>
+              </div>
+              <span className="font-bold text-sm tracking-wide">🎯 Click-to-Predict Mode</span>
+            </label>
+            
+            {customFeatures.length > 0 && (
+              <>
+                <div className="w-px h-5 bg-gray-600"></div>
+                <button 
+                  onClick={() => setCustomFeatures([])} 
+                  className="text-sm text-red-400 hover:text-red-300 font-bold flex items-center transition"
+                  title="Delete all custom markers"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  Clear ({customFeatures.length})
+                </button>
+              </>
+            )}
           </div>
+
           <MapContainer 
             center={[26.1445, 91.7362]} // Centered near Guwahati, Assam
             zoom={6} 
             className="h-full w-full absolute inset-0"
           >
-            <MapClickHandler onMapClick={handleMapClick} />
+            <MapClickHandler onMapClick={handleMapClick} isActive={isClickPredictActive} />
             
             {/* Switched to standard OpenStreetMap to remove Carto API key watermarks */}
             <TileLayer
