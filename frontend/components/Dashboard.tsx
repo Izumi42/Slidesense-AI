@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents } from "react-leaflet";
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in Leaflet with Next.js
@@ -11,8 +11,19 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Component to capture map clicks
+function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
 export default function Dashboard() {
   const [riskData, setRiskData] = useState<any>(null);
+  const [customFeatures, setCustomFeatures] = useState<any[]>([]); // Stores dynamic clicked points
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [selectedDate, setSelectedDate] = useState(""); // "" means Live Data
@@ -39,7 +50,22 @@ export default function Dashboard() {
       });
   }, [isDemoMode, selectedDate]);
 
-  const features = riskData?.features || [];
+  // Handle clicking anywhere on the map to run an instant dynamic prediction
+  const handleMapClick = async (lat: number, lng: number) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    try {
+      const res = await fetch(`${apiUrl}/api/risk-data/custom?lat=${lat}&lng=${lng}`);
+      const newFeature = await res.json();
+      if (newFeature && newFeature.type === "Feature") {
+        setCustomFeatures((prev) => [...prev, newFeature]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch custom point risk:", err);
+    }
+  };
+
+  const defaultFeatures = riskData?.features || [];
+  const allFeatures = [...defaultFeatures, ...customFeatures];
 
   return (
     <div className="flex h-screen flex-col">
@@ -97,20 +123,25 @@ export default function Dashboard() {
       
       <div className="flex flex-1">
         {/* Main Map View */}
-        <main className="flex-1 relative z-0 bg-gray-200">
+        <main className="flex-1 relative z-0 bg-gray-200 cursor-crosshair">
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-gray-900/80 backdrop-blur text-white px-4 py-2 rounded-full shadow-lg border border-gray-600 pointer-events-none animate-bounce">
+            🎯 Click anywhere on the map to analyze custom risk!
+          </div>
           <MapContainer 
             center={[26.1445, 91.7362]} // Centered near Guwahati, Assam
             zoom={6} 
             className="h-full w-full absolute inset-0"
           >
+            <MapClickHandler onMapClick={handleMapClick} />
+            
             {/* Switched to standard OpenStreetMap to remove Carto API key watermarks */}
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             
-            {/* Dynamically render markers from the AI Backend */}
-            {!loading && features.map((feature: any, index: number) => {
+            {/* Dynamically render markers from the AI Backend (Both Static and Custom) */}
+            {!loading && allFeatures.map((feature: any, index: number) => {
               const [lng, lat] = feature.geometry.coordinates;
               const { location, riskScore, explanations } = feature.properties;
               
@@ -162,12 +193,12 @@ export default function Dashboard() {
               </svg>
               Syncing with AI Backend...
             </div>
-          ) : features.length === 0 ? (
+          ) : allFeatures.length === 0 ? (
             <div className="text-red-400 p-4 bg-red-900/20 border border-red-800 rounded">
               <strong>Connection Error:</strong> Backend returned no data. Ensure Python Uvicorn is running on Port 8000.
             </div>
           ) : (
-            [...features]
+            [...allFeatures]
               .sort((a: any, b: any) => b.properties.riskScore - a.properties.riskScore)
               .map((feature: any, index: number) => {
                 const { location, riskScore, explanations } = feature.properties;

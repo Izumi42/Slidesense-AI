@@ -92,3 +92,54 @@ def get_risk_data(demo: bool = False, date: str = None):
         return {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [0,0]}, "properties": {"location": "Error", "riskScore": 0, "explanations": [{"factor": "Error", "value": str(e), "impact": "None"}]}}]}
         
     return {"type": "FeatureCollection", "features": features}
+
+@app.get("/api/risk-data/custom")
+def get_custom_risk_data(lat: float, lng: float):
+    current_time = time.time()
+    cache_key = f"custom_{lat}_{lng}"
+    
+    if cache_key in WEATHER_CACHE and (current_time - WEATHER_CACHE[cache_key]['timestamp']) < 300:
+        rain, moist = WEATHER_CACHE[cache_key]['rain'], WEATHER_CACHE[cache_key]['moist']
+    else:
+        try:
+            # Fetch Live Current Data for the clicked coordinate
+            resp = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=precipitation,relative_humidity_2m", timeout=3).json()
+            rain, moist = resp['current']['precipitation'] * 24, resp['current']['relative_humidity_2m']
+            WEATHER_CACHE[cache_key] = {'rain': rain, 'moist': moist, 'timestamp': current_time}
+        except:
+            rain, moist = 0.0, 40.0
+
+    # Approximate topography for custom points
+    slope, veg = 30.0, 0.5 
+    
+    df_live = pd.DataFrame([{
+        'rainfall_24h': rain, 'soil_moisture': moist, 'slope_steepness': slope, 'vegetation_index': veg
+    }])
+    
+    try:
+        probabilities = GLOBAL_MODEL.predict_proba(df_live)[:, 1] * 100
+        shap_vals = GLOBAL_EXPLAINER.shap_values(df_live)
+        
+        if isinstance(shap_vals, list): shap_vals = shap_vals[1]
+        elif len(np.shape(shap_vals)) == 3: shap_vals = shap_vals[:, :, 1]
+
+        risk_score = round(probabilities[0], 1)
+        local_shap = shap_vals[0]
+        
+        exps = []
+        feature_names = ['rainfall_24h', 'soil_moisture', 'slope_steepness', 'vegetation_index']
+        for j, f in enumerate(feature_names):
+            impact = float(local_shap[j])
+            if impact > 0.02:
+                val = f"{df_live.iloc[0][f]:.1f}{'mm' if f == 'rainfall_24h' else '%' if f == 'soil_moisture' else ''}"
+                exps.append({"factor": f.replace("_", " ").title(), "value": val, "impact": "High" if impact > 0.1 else "Moderate"})
+                
+        if not exps: exps.append({"factor": "Status", "value": "Stable weather conditions", "impact": "None"})
+
+        return {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lng, lat]},
+            "properties": {"location": f"Custom Point ({lat:.1f}, {lng:.1f})", "riskScore": risk_score, "explanations": exps}
+        }
+    except Exception as e:
+        return {"error": str(e)}
