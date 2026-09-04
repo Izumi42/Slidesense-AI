@@ -104,24 +104,32 @@ export default function Dashboard() {
         
         <main className={`flex-1 relative z-0 ${isClickPredictActive ? 'cursor-crosshair' : ''} ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'}`}>
           {/* Floating Map Controls */}
-          <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] flex items-center space-x-4 px-6 py-2.5 rounded-full shadow-2xl border backdrop-blur-xl transition-colors ${isDarkMode ? 'bg-gray-900/90 border-gray-700 text-white' : 'bg-white/90 border-gray-300 text-gray-900'}`}>
-            <label className="flex items-center cursor-pointer group">
-              <div className="relative mr-3">
-                <input type="checkbox" className="sr-only" checked={isClickPredictActive} onChange={() => setIsClickPredictActive(!isClickPredictActive)} />
-                <div className={`block w-11 h-6 rounded-full transition-colors ${isClickPredictActive ? 'bg-blue-500' : isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
-                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform shadow-sm ${isClickPredictActive ? 'translate-x-5' : ''}`}></div>
-              </div>
-              <span className={`font-bold text-sm tracking-wide transition-colors ${isClickPredictActive ? 'text-blue-500' : ''}`}>🎯 Click-to-Predict Mode</span>
-            </label>
-            
+          <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] flex items-center space-x-3">
+            <button 
+              onClick={() => setIsClickPredictActive(!isClickPredictActive)} 
+              className={`px-5 py-2.5 rounded-full font-bold text-sm shadow-xl backdrop-blur-xl transition-all duration-300 flex items-center border ${
+                isClickPredictActive 
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/40' 
+                  : isDarkMode 
+                    ? 'bg-gray-900/90 text-gray-300 border-gray-700 hover:bg-gray-800' 
+                    : 'bg-white/90 text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <span className="mr-2 text-base">🎯</span>
+              {isClickPredictActive ? 'Custom Predict: ON' : 'Custom Predict: OFF'}
+            </button>
+
             {customFeatures.length > 0 && (
-              <>
-                <div className={`w-px h-5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></div>
-                <button onClick={() => setCustomFeatures([])} className="text-sm text-red-500 hover:text-red-400 font-bold flex items-center transition">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  Clear ({customFeatures.length})
-                </button>
-              </>
+              <button 
+                onClick={() => setCustomFeatures([])} 
+                className={`px-4 py-2.5 rounded-full font-bold text-sm shadow-xl backdrop-blur-xl transition-all flex items-center border ${
+                  isDarkMode ? 'bg-gray-900/90 text-red-400 border-gray-700 hover:bg-gray-800' : 'bg-white/90 text-red-500 border-gray-300 hover:bg-gray-50'
+                }`}
+                title="Clear markers"
+              >
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Clear ({customFeatures.length})
+              </button>
             )}
           </div>
 
