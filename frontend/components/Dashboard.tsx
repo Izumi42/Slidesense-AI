@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker } from "react-leaflet";
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in Leaflet with Next.js
@@ -13,6 +13,7 @@ L.Icon.Default.mergeOptions({
 
 export default function Dashboard() {
   const [riskData, setRiskData] = useState<any>(null);
+  const [nasaEvents, setNasaEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [selectedDate, setSelectedDate] = useState(""); // "" means Live Data
@@ -37,6 +38,14 @@ export default function Dashboard() {
         setLoading(false);
       });
   }, [isDemoMode, selectedDate]);
+
+  // Fetch LIVE NASA Satellite Data (EONET) on initial load
+  useEffect(() => {
+    fetch("https://eonet.gsfc.nasa.gov/api/v3/events?category=severeStorms,landslides&status=open&limit=30")
+      .then(res => res.json())
+      .then(data => setNasaEvents(data.events || []))
+      .catch(err => console.error("NASA API Error:", err));
+  }, []);
 
   const features = riskData?.features || [];
 
@@ -82,6 +91,11 @@ export default function Dashboard() {
             <span className={`h-2 w-2 rounded-full mr-2 ${selectedDate ? 'bg-yellow-500' : 'animate-pulse bg-green-500 shadow-[0_0_8px_#22c55e]'}`}></span>
             {selectedDate ? 'Historical Data' : 'Live Data Synced'}
           </span>
+          
+          {/* NASA Satellite Badge */}
+          <span className="text-sm font-bold text-blue-400 flex items-center bg-blue-900/30 py-1 px-3 rounded-full border border-blue-800">
+            🛰️ NASA EONET Active
+          </span>
         </div>
       </header>
       
@@ -99,7 +113,33 @@ export default function Dashboard() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             
-            {/* Dynamically render markers from the AI Backend */}
+            {/* Dynamically render Live NASA EONET Global Disasters */}
+            {nasaEvents.map((event: any, idx: number) => {
+              const latestGeo = event.geometry[event.geometry.length - 1];
+              if (!latestGeo) return null;
+              const [lng, lat] = latestGeo.coordinates;
+              const category = event.categories[0]?.title || "Disaster";
+              
+              return (
+                <CircleMarker 
+                  key={`nasa-${idx}`} 
+                  center={[lat, lng]} 
+                  radius={6} 
+                  pathOptions={{ color: '#3b82f6', fillColor: '#60a5fa', fillOpacity: 0.8, weight: 2 }}
+                >
+                  <Popup>
+                    <div className="p-1">
+                      <div className="text-xs font-bold text-blue-600 mb-1 tracking-wider uppercase">🛰️ NASA Satellite Link</div>
+                      <h3 className="font-bold text-sm mb-1">{event.title}</h3>
+                      <p className="text-xs text-gray-700"><strong>Type:</strong> {category}</p>
+                      <p className="text-xs text-gray-500"><strong>Logged:</strong> {new Date(latestGeo.date).toLocaleString()}</p>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
+
+            {/* Dynamically render SlideSense AI Risk Markers */}
             {!loading && features.map((feature: any, index: number) => {
               const [lng, lat] = feature.geometry.coordinates;
               const { location, riskScore, explanations } = feature.properties;
