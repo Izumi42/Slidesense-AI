@@ -27,7 +27,7 @@ export default function Dashboard() {
   const [isClickPredictActive, setIsClickPredictActive] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); // Default to Dark Mode
+  const [isDarkMode, setIsDarkMode] = useState(false); // Default to Light Mode
 
   useEffect(() => {
     setLoading(true);
