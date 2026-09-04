@@ -15,14 +15,18 @@ export default function Dashboard() {
   const [riskData, setRiskData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(""); // "" means Live Data
 
-  // Fetch AI risk data from FastAPI backend when dashboard loads or toggle changes
+  // Fetch AI risk data from FastAPI backend when dashboard loads or filters change
   useEffect(() => {
     setLoading(true);
-    // Use environment variable for production, fallback to localhost for local dev
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
     
-    fetch(`${apiUrl}/api/risk-data?demo=${isDemoMode}`)
+    // Construct query parameters
+    let query = `?demo=${isDemoMode}`;
+    if (selectedDate) query += `&date=${selectedDate}`;
+    
+    fetch(`${apiUrl}/api/risk-data${query}`)
       .then((res) => res.json())
       .then((data) => {
         setRiskData(data);
@@ -32,7 +36,7 @@ export default function Dashboard() {
         console.error("Failed to fetch risk data:", err);
         setLoading(false);
       });
-  }, [isDemoMode]);
+  }, [isDemoMode, selectedDate]);
 
   const features = riskData?.features || [];
 
@@ -41,22 +45,42 @@ export default function Dashboard() {
       <header className="p-4 bg-gray-800 font-bold text-xl border-b border-gray-700 flex justify-between items-center shadow-lg z-10">
         <span className="text-white tracking-wide">SIH26001: <span className="text-blue-400">SlideSense AI</span></span>
         
-        <div className="flex items-center space-x-8">
+        <div className="flex items-center space-x-6">
+          {/* Historical Date Filter */}
+          <div className="flex items-center bg-gray-700 px-3 py-1 rounded-md border border-gray-600">
+            <span className="text-xs text-gray-300 mr-2 uppercase tracking-wide">History:</span>
+            <input 
+              type="date" 
+              value={selectedDate}
+              onChange={(e) => { setIsDemoMode(false); setSelectedDate(e.target.value); }}
+              className="bg-gray-800 text-white text-sm rounded px-2 py-1 border border-gray-600 focus:outline-none focus:border-blue-400"
+              max={new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // API has 5 day lag
+            />
+            {selectedDate && (
+              <button 
+                onClick={() => setSelectedDate("")}
+                className="ml-2 text-xs text-blue-400 hover:text-blue-300 font-normal underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
           {/* Hackathon Demo Toggle */}
           <label className="flex items-center cursor-pointer bg-gray-700 py-1 px-3 rounded-full hover:bg-gray-600 transition">
             <span className="mr-3 text-sm font-bold text-white uppercase tracking-wider">
               Simulate Storm
             </span>
             <div className="relative">
-              <input type="checkbox" className="sr-only" checked={isDemoMode} onChange={() => setIsDemoMode(!isDemoMode)} />
+              <input type="checkbox" className="sr-only" checked={isDemoMode} onChange={() => { setIsDemoMode(!isDemoMode); setSelectedDate(""); }} />
               <div className={`block w-10 h-6 rounded-full transition-colors ${isDemoMode ? 'bg-red-500' : 'bg-gray-900'}`}></div>
               <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform ${isDemoMode ? 'translate-x-4' : ''}`}></div>
             </div>
           </label>
 
-          <span className="text-sm font-normal text-green-400 flex items-center bg-gray-900 py-1 px-3 rounded-full">
-            <span className="animate-pulse h-2 w-2 bg-green-500 rounded-full mr-2 shadow-[0_0_8px_#22c55e]"></span>
-            Live Data Synced
+          <span className={`text-sm font-normal flex items-center py-1 px-3 rounded-full ${selectedDate ? 'bg-yellow-900/50 text-yellow-400' : 'bg-gray-900 text-green-400'}`}>
+            <span className={`h-2 w-2 rounded-full mr-2 ${selectedDate ? 'bg-yellow-500' : 'animate-pulse bg-green-500 shadow-[0_0_8px_#22c55e]'}`}></span>
+            {selectedDate ? 'Historical Data' : 'Live Data Synced'}
           </span>
         </div>
       </header>

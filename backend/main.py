@@ -20,7 +20,7 @@ except:
 WEATHER_CACHE = {}
 
 @app.get("/api/risk-data")
-def get_risk_data(demo: bool = False):
+def get_risk_data(demo: bool = False, date: str = None):
     hotspots = [
         {"name": "Gangtok (Sikkim)", "lat": 27.3389, "lng": 88.6065, "slope": 35.0, "veg": 0.6},
         {"name": "Guwahati (Assam)", "lat": 26.1445, "lng": 91.7362, "slope": 15.0, "veg": 0.4},
@@ -33,18 +33,30 @@ def get_risk_data(demo: bool = False):
     
     for spot in hotspots:
         name = spot["name"]
-        if name in WEATHER_CACHE and (current_time - WEATHER_CACHE[name]['timestamp']) < 300:
-            rain, moist = WEATHER_CACHE[name]['rain'], WEATHER_CACHE[name]['moist']
+        cache_key = f"{name}_{date}_{demo}"
+        
+        if cache_key in WEATHER_CACHE and (current_time - WEATHER_CACHE[cache_key]['timestamp']) < 300:
+            rain, moist = WEATHER_CACHE[cache_key]['rain'], WEATHER_CACHE[cache_key]['moist']
         else:
             try:
-                resp = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={spot['lat']}&longitude={spot['lng']}&current=precipitation,relative_humidity_2m", timeout=3).json()
-                rain, moist = resp['current']['precipitation'] * 24, resp['current']['relative_humidity_2m']
-                WEATHER_CACHE[name] = {'rain': rain, 'moist': moist, 'timestamp': current_time}
-            except:
+                if date:
+                    # Fetch Historical Data for the exact date selected
+                    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={spot['lat']}&longitude={spot['lng']}&start_date={date}&end_date={date}&daily=precipitation_sum&timezone=auto"
+                    resp = requests.get(url, timeout=3).json()
+                    rain = resp['daily']['precipitation_sum'][0]
+                    if rain is None: rain = 0.0
+                    moist = min(95.0, 30.0 + (rain * 0.8)) # Derived historical moisture
+                else:
+                    # Fetch Live Current Data
+                    resp = requests.get(f"https://api.open-meteo.com/v1/forecast?latitude={spot['lat']}&longitude={spot['lng']}&current=precipitation,relative_humidity_2m", timeout=3).json()
+                    rain, moist = resp['current']['precipitation'] * 24, resp['current']['relative_humidity_2m']
+                    
+                WEATHER_CACHE[cache_key] = {'rain': rain, 'moist': moist, 'timestamp': current_time}
+            except Exception as e:
+                print(f"Weather Fetch Error: {e}")
                 rain, moist = 0.0, 40.0
 
         # --- HACKATHON DEMO OVERRIDE ---
-        # Artificially spike Tawang's weather if UI toggle is flipped
         if demo and "Tawang" in name:
             rain, moist = 260.0, 88.0
         # -------------------------------
