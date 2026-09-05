@@ -31,23 +31,27 @@ def fetch_weather_for_spot(spot: dict, date: str, demo: bool, current_time: floa
     if cache_key in WEATHER_CACHE and (current_time - WEATHER_CACHE[cache_key]['timestamp']) < 300:
         rain, moist = WEATHER_CACHE[cache_key]['rain'], WEATHER_CACHE[cache_key]['moist']
     else:
-        # 2. Fetch from External API
-        try:
-            if date:
-                url = f"https://archive-api.open-meteo.com/v1/archive?latitude={spot['lat']}&longitude={spot['lng']}&start_date={date}&end_date={date}&daily=precipitation_sum&timezone=auto"
-                resp = requests.get(url, timeout=4).json()
-                rain = resp['daily']['precipitation_sum'][0]
-                if rain is None: rain = 0.0
-                moist = min(95.0, 30.0 + (rain * 0.8)) # Derived historical moisture
-            else:
-                url = f"https://api.open-meteo.com/v1/forecast?latitude={spot['lat']}&longitude={spot['lng']}&current=precipitation,relative_humidity_2m"
-                resp = requests.get(url, timeout=4).json()
-                rain, moist = resp['current']['precipitation'] * 24, resp['current']['relative_humidity_2m']
-                
-            WEATHER_CACHE[cache_key] = {'rain': rain, 'moist': moist, 'timestamp': current_time}
-        except Exception as e:
-            print(f"Weather Fetch Error for {name}: {e}")
-            rain, moist = 0.0, 40.0
+        # 2. Fetch from External API with Retry Logic (prevents silent rate-limit drops)
+        for attempt in range(3):
+            try:
+                if date:
+                    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={spot['lat']}&longitude={spot['lng']}&start_date={date}&end_date={date}&daily=precipitation_sum&timezone=auto"
+                    resp = requests.get(url, timeout=5).json()
+                    rain = resp['daily']['precipitation_sum'][0]
+                    if rain is None: rain = 0.0
+                    moist = min(95.0, 30.0 + (rain * 0.8)) # Derived historical moisture
+                else:
+                    url = f"https://api.open-meteo.com/v1/forecast?latitude={spot['lat']}&longitude={spot['lng']}&current=precipitation,relative_humidity_2m"
+                    resp = requests.get(url, timeout=5).json()
+                    rain, moist = resp['current']['precipitation'] * 24, resp['current']['relative_humidity_2m']
+                    
+                WEATHER_CACHE[cache_key] = {'rain': rain, 'moist': moist, 'timestamp': current_time}
+                break  # Success, exit retry loop
+            except Exception as e:
+                if attempt == 2:
+                    print(f"Weather Fetch Error for {name} after 3 attempts: {e}")
+                    rain, moist = 0.0, 40.0
+                time.sleep(0.5)  # Wait 500ms before retrying
 
     # 3. Hackathon Demo Overrides
     if demo and "Tawang" in name:
