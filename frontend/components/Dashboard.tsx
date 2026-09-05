@@ -27,11 +27,14 @@ export default function Dashboard() {
     let query = `?demo=${isDemoMode}`;
     if (selectedDate) query += `&date=${selectedDate}`;
     
-    // Cache-buster: Appends a random timestamp so the browser NEVER caches the API response
+    // Cache-buster & AbortController to fix React race conditions
     const timestamp = new Date().getTime();
+    const abortController = new AbortController();
+    const signal = abortController.signal;
     
     fetch(`${apiUrl}/api/risk-data${query}&_t=${timestamp}`, {
       cache: 'no-store',
+      signal: signal,
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
@@ -40,13 +43,22 @@ export default function Dashboard() {
     })
       .then((res) => res.json())
       .then((data) => {
-        setRiskData(data);
-        setLoading(false);
+        if (!signal.aborted) {
+          setRiskData(data);
+          setLoading(false);
+        }
       })
       .catch((err) => {
-        console.error("Failed to fetch risk data:", err);
-        setLoading(false);
+        if (!signal.aborted) {
+          console.error("Failed to fetch risk data:", err);
+          setLoading(false);
+        }
       });
+      
+    // Cleanup function to abort stale requests if the user clicks quickly
+    return () => {
+      abortController.abort();
+    };
   }, [isDemoMode, selectedDate]);
 
   const features = riskData?.features || [];
