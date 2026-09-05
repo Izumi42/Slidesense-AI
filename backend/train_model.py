@@ -52,12 +52,20 @@ df = pd.DataFrame(all_data)
 
 # Labeling the Historical Data:
 # We determine the physical risk based on the real historical weather we just downloaded.
-# Higher rainfall, higher moisture, steeper slope, lower vegetation = higher risk
-base_risk = (df['rainfall_24h'] * 0.35) + (df['soil_moisture'] * 0.4) + (df['slope_steepness'] * 1.5) - (df['vegetation_index'] * 40)
+df['landslide_occurred'] = 0
 
-# We flag the top 12% of the most extreme historical weather conditions as actual Landslide Events (Class 1)
-threshold = df['rainfall_24h'].quantile(0.88)
-df['landslide_occurred'] = (base_risk > base_risk.quantile(0.88)).astype(int)
+for idx, row in df.iterrows():
+    rain = row['rainfall_24h']
+    slope = row['slope_steepness']
+    
+    # Realistic Geological Model: Landslides require heavy rainfall.
+    # The steeper the slope, the less rain is required to trigger a landslide.
+    if slope >= 40 and rain > 35.0:
+        df.at[idx, 'landslide_occurred'] = 1
+    elif slope >= 25 and rain > 55.0:
+        df.at[idx, 'landslide_occurred'] = 1
+    elif slope < 25 and rain > 85.0:
+        df.at[idx, 'landslide_occurred'] = 1
 
 df.to_csv('ner_historical_data.csv', index=False)
 print(f"-> Successfully processed {len(df)} days of real historical data into ner_historical_data.csv")
