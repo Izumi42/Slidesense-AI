@@ -27,7 +27,17 @@ export default function Dashboard() {
     let query = `?demo=${isDemoMode}`;
     if (selectedDate) query += `&date=${selectedDate}`;
     
-    fetch(`${apiUrl}/api/risk-data${query}`)
+    // Cache-buster: Appends a random timestamp so the browser NEVER caches the API response
+    const timestamp = new Date().getTime();
+    
+    fetch(`${apiUrl}/api/risk-data${query}&_t=${timestamp}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         setRiskData(data);
