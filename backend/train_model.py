@@ -23,8 +23,8 @@ all_data = []
 
 for city in cities:
     print(f"-> Downloading 3 years of daily historical weather for {city['name']}...")
-    # Fetching daily precipitation from 2021 to 2023
-    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={city['lat']}&longitude={city['lng']}&start_date=2021-01-01&end_date=2023-12-31&daily=precipitation_sum&timezone=auto"
+    # Fetching daily precipitation for the most recent 3 full years (2023-2025)
+    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={city['lat']}&longitude={city['lng']}&start_date=2023-01-01&end_date=2025-12-31&daily=precipitation_sum&timezone=auto"
     
     try:
         resp = requests.get(url, timeout=10).json()
